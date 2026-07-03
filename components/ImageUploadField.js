@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { uploadMedia } from "@/app/admin/actions";
 
 export default function ImageUploadField({ name, defaultValue }) {
@@ -29,7 +30,7 @@ export default function ImageUploadField({ name, defaultValue }) {
       {uploading && <p style={{ fontSize: 13, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>uploading…</p>}
       {error && <p style={{ fontSize: 13, color: "#e08a8a" }}>{error}</p>}
       {url && (
-        <img src={url} alt="" style={{ marginTop: 10, maxHeight: 140, border: "1px solid var(--line-strong)", borderRadius: 2 }} />
+        <Image src={url} alt="" width={400} height={200} style={{ marginTop: 10, maxHeight: 140, border: "1px solid var(--line-strong)", borderRadius: 2, width: "auto", height: 140 }} />
       )}
     </div>
   );

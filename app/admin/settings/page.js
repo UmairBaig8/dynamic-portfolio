@@ -4,7 +4,7 @@ import SettingsForm from "@/components/SettingsForm";
 export const revalidate = 0;
 
 export default async function SettingsPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: settings } = await supabase.from("site_settings").select("*").eq("id", 1).single();
 
   return (

@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SiteNav from "@/components/SiteNav";
+import { readingTime } from "@/lib/reading-time";
 
 export const revalidate = 0;
 
 export default async function BlogPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: settings } = await supabase.from("site_settings").select("name").eq("id", 1).single();
   const { data: posts } = await supabase
     .from("posts")
     .select("*")
-    .eq("published", true)
-    .order("published_at", { ascending: false });
+    .or(`published.eq.true,publish_at.lte.${new Date().toISOString()}`)
+    .order("published_at", { ascending: false, nullsLast: true });
 
   return (
     <>
@@ -31,8 +32,10 @@ export default async function BlogPage() {
               href={`/blog/${post.slug}`}
               style={{ display: "block", padding: "22px 0", borderBottom: "1px solid var(--line)" }}
             >
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent-2)" }}>
-                {post.published_at ? new Date(post.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : ""}
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent-2)", display: "flex", gap: 8 }}>
+                <span>{post.published_at ? new Date(post.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : ""}</span>
+                <span style={{ color: "var(--muted)" }}>·</span>
+                <span style={{ color: "var(--muted)" }}>{readingTime(post.content)}</span>
               </div>
               <h3 style={{ marginTop: 8, marginBottom: 6 }}>{post.title}</h3>
               <p style={{ color: "var(--muted)", margin: 0 }}>{post.excerpt}</p>

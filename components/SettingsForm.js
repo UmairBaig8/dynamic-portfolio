@@ -1,24 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { saveSettings } from "@/app/admin/actions";
+import useUnsavedChanges from "@/lib/useUnsavedChanges";
 
 export default function SettingsForm({ settings }) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const formRef = useRef(null);
+  const { markDirty, resetDirty } = useUnsavedChanges(formRef, "settings");
 
   async function handleSubmit(formData) {
     setSaving(true);
     setSaved(false);
     const res = await saveSettings(formData);
     if (res?.error) setError(res.error);
-    else setSaved(true);
+    else { setSaved(true); resetDirty(); }
     setSaving(false);
   }
 
   return (
-    <form action={handleSubmit} style={{ maxWidth: 560 }}>
+    <form action={handleSubmit} ref={formRef} style={{ maxWidth: 560 }} onChange={markDirty}>
       <div className="field">
         <label htmlFor="name">Name</label>
         <input id="name" name="name" defaultValue={settings?.name} />

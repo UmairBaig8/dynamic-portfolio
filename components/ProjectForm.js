@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { saveProject, deleteProject } from "@/app/admin/actions";
 import ImageUploadField from "./ImageUploadField";
+import useUnsavedChanges from "@/lib/useUnsavedChanges";
 
 export default function ProjectForm({ project }) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const formRef = useRef(null);
+  const { markDirty, resetDirty } = useUnsavedChanges(formRef, project ? `project-${project.id}` : null);
 
   async function handleSubmit(formData) {
     setSaving(true);
@@ -14,11 +17,13 @@ export default function ProjectForm({ project }) {
     if (res?.error) {
       setError(res.error);
       setSaving(false);
+    } else {
+      resetDirty();
     }
   }
 
   return (
-    <form action={handleSubmit}>
+    <form action={handleSubmit} ref={formRef} onChange={markDirty}>
       <div className="field">
         <label htmlFor="title">Title</label>
         <input id="title" name="title" defaultValue={project?.title} required />
@@ -38,6 +43,17 @@ export default function ProjectForm({ project }) {
       <div className="field">
         <label htmlFor="tech_stack">Tech stack (comma separated)</label>
         <input id="tech_stack" name="tech_stack" defaultValue={(project?.tech_stack || []).join(", ")} placeholder="Next.js, Supabase, Netlify" />
+      </div>
+      <div className="field">
+        <label htmlFor="category">Category</label>
+        <select id="category" name="category" defaultValue={project?.category || ""}>
+          <option value="">None</option>
+          <option value="web">Web</option>
+          <option value="mobile">Mobile</option>
+          <option value="cli">CLI / Tooling</option>
+          <option value="design">Design</option>
+          <option value="other">Other</option>
+        </select>
       </div>
       <ImageUploadField name="cover_image_url" defaultValue={project?.cover_image_url} />
       <div className="grid-2">

@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 /* ---------- AUTH ---------- */
 
 export async function signIn(formData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -17,7 +17,7 @@ export async function signIn(formData) {
 }
 
 export async function signOut() {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/admin/login");
 }
@@ -33,7 +33,7 @@ function slugify(str) {
 }
 
 export async function saveProject(formData, id) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const title = formData.get("title");
   const payload = {
     title,
@@ -44,6 +44,7 @@ export async function saveProject(formData, id) {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),
+    category: formData.get("category") || null,
     cover_image_url: formData.get("cover_image_url"),
     live_url: formData.get("live_url"),
     repo_url: formData.get("repo_url"),
@@ -63,19 +64,62 @@ export async function saveProject(formData, id) {
 }
 
 export async function deleteProject(id) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("projects").delete().eq("id", id);
   revalidatePath("/projects");
   revalidatePath("/");
   redirect("/admin/projects");
 }
 
+export async function reorderProject(id, direction) {
+  const supabase = await createClient();
+  const { data: all } = await supabase.from("projects").select("id, sort_order").order("sort_order");
+  if (!all) return;
+
+  const index = all.findIndex((p) => p.id === id);
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (index === -1 || swapIndex < 0 || swapIndex >= all.length) return;
+
+  const current = all[index];
+  const swap = all[swapIndex];
+
+  await supabase.from("projects").update({ sort_order: swap.sort_order }).eq("id", current.id);
+  await supabase.from("projects").update({ sort_order: current.sort_order }).eq("id", swap.id);
+
+  revalidatePath("/admin/projects");
+  revalidatePath("/projects");
+  revalidatePath("/");
+}
+
+export async function reorderProjectDrag(activeId, overId) {
+  const supabase = await createClient();
+  const { data: all } = await supabase.from("projects").select("id, sort_order").order("sort_order");
+  if (!all) return;
+
+  const activeIndex = all.findIndex((p) => p.id === activeId);
+  const overIndex = all.findIndex((p) => p.id === overId);
+  if (activeIndex === -1 || overIndex === -1) return;
+
+  const [item] = all.splice(activeIndex, 1);
+  all.splice(overIndex, 0, item);
+
+  const updates = all.map((p, i) => ({ id: p.id, sort_order: i }));
+  for (const u of updates) {
+    await supabase.from("projects").update({ sort_order: u.sort_order }).eq("id", u.id);
+  }
+
+  revalidatePath("/admin/projects");
+  revalidatePath("/projects");
+  revalidatePath("/");
+}
+
 /* ---------- POSTS ---------- */
 
 export async function savePost(formData, id) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const title = formData.get("title");
   const published = formData.get("published") === "on";
+  const publishAt = formData.get("publish_at") || null;
   const payload = {
     title,
     slug: formData.get("slug") || slugify(title),
@@ -86,8 +130,9 @@ export async function savePost(formData, id) {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),
-    published,
-    published_at: published ? new Date().toISOString() : null,
+    published: publishAt ? false : published,
+    publish_at: publishAt,
+    published_at: published && !publishAt ? new Date().toISOString() : null,
   };
 
   const { error } = id
@@ -101,16 +146,35 @@ export async function savePost(formData, id) {
 }
 
 export async function deletePost(id) {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.from("posts").delete().eq("id", id);
   revalidatePath("/blog");
   redirect("/admin/posts");
 }
 
+export async function bulkActionPosts(formData) {
+  const supabase = await createClient();
+  const action = formData.get("action");
+  const ids = formData.getAll("ids");
+
+  if (!ids.length) return { error: "No posts selected." };
+
+  if (action === "delete") {
+    await supabase.from("posts").delete().in("id", ids);
+  } else if (action === "publish") {
+    await supabase.from("posts").update({ published: true, published_at: new Date().toISOString() }).in("id", ids);
+  } else if (action === "unpublish") {
+    await supabase.from("posts").update({ published: false }).in("id", ids);
+  }
+
+  revalidatePath("/admin/posts");
+  revalidatePath("/blog");
+}
+
 /* ---------- SETTINGS ---------- */
 
 export async function saveSettings(formData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const payload = {
     name: formData.get("name"),
     tagline: formData.get("tagline"),
@@ -132,7 +196,7 @@ export async function saveSettings(formData) {
 /* ---------- MEDIA UPLOAD ---------- */
 
 export async function uploadMedia(formData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const file = formData.get("file");
   if (!file || file.size === 0) return { error: "No file provided" };
 

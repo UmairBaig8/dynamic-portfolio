@@ -1,10 +1,13 @@
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import DragSortTable from "@/components/DragSortTable";
+import { reorderProjectDrag } from "@/app/admin/actions";
 
 export const revalidate = 0;
 
 export default async function AdminProjects() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: projects } = await supabase.from("projects").select("*").order("sort_order");
 
   return (
@@ -17,26 +20,30 @@ export default async function AdminProjects() {
         <Link href="/admin/projects/new" className="btn primary">+ new project</Link>
       </div>
 
-      <table>
-        <thead>
-          <tr><th>Title</th><th>Slug</th><th>Featured</th><th></th></tr>
-        </thead>
-        <tbody>
-          {projects?.map((p) => (
-            <tr key={p.id}>
-              <td>{p.title}</td>
-              <td style={{ fontFamily: "var(--font-mono)", color: "var(--muted)" }}>{p.slug}</td>
-              <td>{p.featured ? "yes" : "—"}</td>
-              <td>
-                <Link href={`/admin/projects/${p.id}/edit`} className="btn ghost" style={{ padding: "6px 12px" }}>edit</Link>
-              </td>
-            </tr>
-          ))}
-          {(!projects || projects.length === 0) && (
-            <tr><td colSpan={4} style={{ color: "var(--muted)" }}>No projects yet.</td></tr>
-          )}
-        </tbody>
-      </table>
+      <DragSortTable
+        columns={["Cover", "Title", "Slug", "Featured", ""]}
+        rows={projects || []}
+        searchFields={["title", "slug"]}
+        placeholder="Search projects\u2026"
+        onReorder={reorderProjectDrag}
+        renderRow={(p) => (
+          <>
+            <td style={{ width: 1 }}>
+              {p.cover_image_url ? (
+                <Image src={p.cover_image_url} alt="" width={48} height={32} style={{ objectFit: "cover", border: "1px solid var(--line-strong)" }} />
+              ) : (
+                <div style={{ width: 48, height: 32, border: "1px dashed var(--line-strong)" }} />
+              )}
+            </td>
+            <td>{p.title}</td>
+            <td style={{ fontFamily: "var(--font-mono)", color: "var(--muted)" }}>{p.slug}</td>
+            <td>{p.featured ? "yes" : "—"}</td>
+            <td>
+              <Link href={`/admin/projects/${p.id}/edit`} className="btn ghost" style={{ padding: "6px 12px" }}>edit</Link>
+            </td>
+          </>
+        )}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ create table if not exists projects (
   summary text,
   description text,
   tech_stack text[] default '{}',
+  category text,
   cover_image_url text,
   live_url text,
   repo_url text,
@@ -31,6 +32,7 @@ create table if not exists posts (
   tags text[] default '{}',
   published boolean default false,
   published_at timestamptz,
+  publish_at timestamptz, -- scheduled future publish
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

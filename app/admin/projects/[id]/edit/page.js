@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 export const revalidate = 0;
 
 export default async function EditProject({ params }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: project } = await supabase.from("projects").select("*").eq("id", params.id).single();
   if (!project) notFound();
 

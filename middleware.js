@@ -31,8 +31,9 @@ export async function middleware(request) {
 
   const path = request.nextUrl.pathname;
   const isAdminRoute = path.startsWith("/admin") && path !== "/admin/login";
+  const isPreviewRoute = path.startsWith("/preview");
 
-  if (isAdminRoute && !user) {
+  if ((isAdminRoute || isPreviewRoute) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     url.searchParams.set("redirectedFrom", path);
@@ -49,5 +50,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/preview/:path*"],
 };

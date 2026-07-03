@@ -4,8 +4,21 @@ import SiteNav from "@/components/SiteNav";
 
 export const revalidate = 0;
 
+export async function generateMetadata() {
+  const supabase = await createClient();
+  const { data: settings } = await supabase.from("site_settings").select("*").eq("id", 1).single();
+  const title = settings?.name ? `${settings.name} — ${settings.tagline || "Portfolio"}` : "Portfolio";
+  const description = settings?.bio || "Projects and writing.";
+  return {
+    title,
+    description,
+    openGraph: { title, description, images: settings?.avatar_url ? [settings.avatar_url] : [] },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
+
 export default async function HomePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: settings } = await supabase
     .from("site_settings")
