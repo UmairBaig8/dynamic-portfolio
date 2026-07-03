@@ -2,61 +2,109 @@
 
 Next.js portfolio with a self-hosted, authenticated admin dashboard (no third-party CMS). Content lives in your own Supabase Postgres database; you edit it from `/admin`.
 
-## 1. Create your Supabase project
+---
 
-1. Go to [supabase.com](https://supabase.com) → New project.
-2. Once created, open **SQL Editor** → paste the contents of `supabase/schema.sql` → Run.
-3. Go to **Storage** → **New bucket** → name it `media` → make it **Public**. (The storage policies in `schema.sql` assume this exact bucket name.)
-4. Go to **Authentication → Users** → **Add user** to create your own admin login (this is how you and any collaborators sign in to `/admin`). Add one user per collaborator — no shared logins.
-5. Go to **Project Settings → API** → copy the **Project URL** and **anon public key**.
+## Local Dev Setup
 
-## 2. Configure the app
+### Prerequisites
+- Node.js 18+
+- Supabase CLI (`brew install supabase/tap/supabase` or `npm i -g supabase`)
+- Git
 
+### 1. Clone & install
+```bash
+git clone https://github.com/UmairBaig8/dynamic-portfolio
+cd dynamic-portfolio
+npm install
+```
+
+### 2. Create Supabase project
+- Go to [supabase.com](https://supabase.com) → **New project**
+- Note the **project ref** from **Project Settings → General → Reference ID**
+
+### 3. Link & push schema
+```bash
+supabase login              # generates a token via browser
+supabase link --project-ref <your-ref>
+supabase db push            # deploys schema.sql → creates tables + RLS + triggers
+```
+
+### 4. Create storage bucket & admin user
+Do these in the Supabase dashboard:
+
+- **Storage** → **New bucket** → name: `media` → **Public bucket**
+- **Authentication → Users** → **Add user** → your email + password
+
+### 5. Environment variables
 ```bash
 cp .env.example .env.local
 ```
+Get values from **Project Settings → API**:
+- `NEXT_PUBLIC_SUPABASE_URL` = your project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon public key
 
-Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from step 1.5.
-
+### 6. Run
 ```bash
-npm install
 npm run dev
 ```
+- Public site: `http://localhost:3000`
+- Admin: `http://localhost:3000/admin/login`
 
-Visit `http://localhost:3000` for the public site, `http://localhost:3000/admin/login` to sign in.
+---
 
-## 3. Deploy to Netlify
+## Deploy to Netlify
 
-1. Push this project to a GitHub repo.
-2. In Netlify: **Add new site → Import an existing project** → pick the repo.
-3. Netlify auto-detects Next.js (via `netlify.toml` + the `@netlify/plugin-nextjs` plugin — it installs automatically on first build).
-4. Under **Site settings → Environment variables**, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-5. Deploy. Your public site and `/admin` are both served from the same Netlify URL.
+1. Push to GitHub
+2. [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import from GitHub** → pick repo
+3. Netlify reads `netlify.toml` automatically
+4. **Site settings → Environment variables** → add:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. Redeploy: **Deploys → Trigger deploy → Deploy site**
+6. Public + admin both at `https://your-site.netlify.app`
+
+---
+
+## Redeploy from scratch
+
+**Supabase:**
+- Create new project at supabase.com
+- `supabase link --project-ref <new-ref>`
+- `supabase db push`
+- Create `media` bucket (Public)
+- Add user in Auth
+
+**Local:**
+- Update `.env.local` with new URL + anon key
+- `npm run dev`
+
+**Netlify:**
+- Import repo, add env vars, deploy
+
+---
 
 ## How editing works
 
-- Sign in at `/admin/login` with a user you created in Supabase Auth.
-- Add/edit projects and posts from the dashboard — changes write directly to Postgres.
-- Public pages (`/`, `/projects`, `/blog`, `/about`) fetch fresh on every request (`revalidate = 0`), so edits appear immediately with **no rebuild needed**.
-- Images upload straight to Supabase Storage from the admin forms.
-
-## Adding collaborators
-
-Supabase Auth → Users → Add user. Any authenticated user can access `/admin` and edit all content — there are no per-user roles in this starter. If you need view-only or restricted roles later, that's a Row Level Security (RLS) policy change in `supabase/schema.sql`.
+- Sign in at `/admin/login`
+- Add/edit projects, posts, and site settings — writes directly to Postgres
+- Public pages fetch fresh every request (`revalidate: 0`) — **no rebuild needed**
+- Images upload to Supabase Storage from admin forms
 
 ## Project structure
 
 ```
-app/                   Public pages + /admin (App Router)
+app/                    App Router pages (public + admin)
   admin/actions.js      All server actions: auth, CRUD, uploads
-components/             Shared UI (forms, editor, nav)
-lib/supabase/           Browser/server Supabase clients
-supabase/schema.sql      Tables, RLS policies, storage policies
-middleware.js            Session refresh + /admin route protection
+components/             Shared UI (forms, rich text editor, nav)
+lib/supabase/           Browser + server Supabase clients
+supabase/schema.sql     Tables, RLS policies, storage policies
+supabase/migrations/    Versioned migrations (pushed via supabase db push)
+middleware.js           Session refresh + /admin route protection
+netlify.toml            Netlify build config
 ```
 
-## Extending it
+## Extending
 
-- **Custom domain:** Netlify → Domain settings.
-- **Draft previews:** posts already support `published: false` as a draft state — just don't publish until ready.
-- **More content types:** copy the `projects` table + `ProjectForm` pattern for anything else (e.g. `talks`, `experience`).
+- **Draft previews:** posts support `published: false` — won't show on public blog
+- **New content types:** copy the `projects` table + `ProjectForm` pattern
+- **Custom domain:** Netlify → Domain settings
