@@ -20,7 +20,7 @@
     "@tiptap/extension-link": "^2.9.1",
     "@tiptap/react": "^2.9.1",
     "@tiptap/starter-kit": "^2.9.1",
-    "next": "^16.2.10",
+    "next": "^16.3.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
